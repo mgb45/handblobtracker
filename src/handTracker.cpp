@@ -21,8 +21,8 @@ HandTracker::HandTracker()
 	
 	face_found.views = 0;
 		
-	tempSL = 0;
-	tempSR = 0;
+	tempS[0] = 0;
+	tempS[1] = 0;
 	
 	cv::Mat subImg1 = cv::Mat::zeros(50,50,CV_8UC3);
 	
@@ -74,22 +74,22 @@ HandTracker::~HandTracker()
 	delete sync;
 }
 
-void HandTracker::checkHandsInitialisation(cv::Mat likelihood, cv::Mat image3, double xShift,cv::RotatedRect &roi, bool &track)
+void HandTracker::checkHandsInitialisation(cv::Mat likelihood, cv::Mat image3, double xShift,cv::RotatedRect &roi, bool &track, double &tempScore)
 {
 	cv::RotatedRect bestRoi;
-	double tempScore,bestScore = 0;
+	double bestScore = 0;
 	/********Left right hand initialisation ************/
 	if (!track)
 	{
 		cv::Rect temp;
-		for (int i = xShift; i <= xShift + (int)image3.cols/2-80; i+=80)
+		for (int i = xShift; i <= xShift + (int)image3.cols/2-(int)image3.cols/4; i+=(int)image3.cols/4)
 		{
-			for (int j = 0; j <= (int)image3.rows-80; j+=80)
+			for (int j = 0; j <= (int)image3.rows-(int)image3.rows/4; j+=(int)image3.rows/4)
 			{
 				temp.x = i;//xShift + image3.cols/16;
 				temp.y = j;//image3.rows/8;
-				temp.width = 80;
-				temp.height = 80;
+				temp.width = (int)image3.cols/4;
+				temp.height = (int)image3.rows/4;
 				rectangle(image3, temp, Scalar(255,0,0), 2, 8, 0);
 				roi = CamShift(likelihood, temp, TermCriteria( CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 5, 1 ));
 				roi.size.height = min((int)roi.size.height,50);
@@ -105,6 +105,7 @@ void HandTracker::checkHandsInitialisation(cv::Mat likelihood, cv::Mat image3, d
 			}
 		}
 		
+		tempScore = bestScore;
 		roi = bestRoi;
 		temp = roi.boundingRect();
 		temp = adjustRect(temp,image3.size());
@@ -118,7 +119,6 @@ void HandTracker::checkHandsInitialisation(cv::Mat likelihood, cv::Mat image3, d
 			const char* err_msg = e.what();
 			ROS_ERROR("%s",err_msg);
 		}	
-		
 		
 		ROS_DEBUG("Init: %f",bestScore);
 		if ((bestScore < lScoreInit)||(temp.width <= 5)||(temp.height <= 5))
@@ -165,7 +165,7 @@ cv::Rect HandTracker::adjustRect(cv::Rect temp,cv::Size size)
 	return newRect;
 }
 
-void HandTracker::updateHandPos(cv::Mat likelihood, cv::Mat image3, cv::RotatedRect &roi, bool &track, face &face_in)
+void HandTracker::updateHandPos(cv::Mat likelihood, cv::Mat image3, cv::RotatedRect &roi, bool &track, face &face_in, double &tempScore)
 {
 	if (track)
 	{
@@ -190,11 +190,11 @@ void HandTracker::updateHandPos(cv::Mat likelihood, cv::Mat image3, cv::RotatedR
 		roi.size.width = min((int)roi.size.width,face_in.roi.width);
 		temp = roi.boundingRect();
 		temp = adjustRect(temp,image3.size());
-		tempSR = tempSR*0.6 + 0.4*cv::sum(likelihood(temp))[0]/(255.0*M_PI*temp.width*temp.height/4.0);
-		ROS_DEBUG("Track: %f",tempSR);
-		if ((tempSR < lScoreThresh)||(temp.width <= 1)||(temp.height <= 1))
+		tempScore = tempScore*0.6 + 0.4*cv::sum(likelihood(temp))[0]/(255.0*M_PI*temp.width*temp.height/4.0);
+		ROS_DEBUG("Track: %f",tempScore);
+		if ((tempScore < lScoreThresh)||(temp.width <= 1)||(temp.height <= 1))
 		{
-			ROS_WARN ("Lost Hand! %f %d %d",tempSR,temp.width,temp.height);
+			ROS_WARN ("Lost Hand! %f %d %d",tempScore,temp.width,temp.height);
 			track = false;
 		}
 					
@@ -215,7 +215,7 @@ void HandTracker::HandDetector(cv::Mat likelihood, face &face_in, cv::Mat image3
 {
 	//Set face probability to zero, not a hand
 	cv::Rect roi_enlarged; // enlarge face to cover neck and ear blobs
-	roi_enlarged.height = face_in.roi.height*1.8;
+	roi_enlarged.height = face_in.roi.height*1.9;
 	roi_enlarged.width = face_in.roi.width*1.5;
 	roi_enlarged.x = face_in.roi.width/2 + face_in.roi.x - roi_enlarged.width/2;
 	roi_enlarged.y = face_in.roi.height/2 + face_in.roi.y - roi_enlarged.height/3;
@@ -281,8 +281,8 @@ void HandTracker::HandDetector(cv::Mat likelihood, face &face_in, cv::Mat image3
 		
 	for (int i = 0; i < 2; i++)
 	{
-		checkHandsInitialisation(tempLikelihood[i],image3,(double)i*(double)likelihood.cols/2.0,box[i],tracked[i]);
-		updateHandPos(tempLikelihood[i], image3, box[i], tracked[i], face_in);
+		checkHandsInitialisation(tempLikelihood[i],image3,(double)i*(double)likelihood.cols/2.0,box[i],tracked[i],tempS[i]);
+		updateHandPos(tempLikelihood[i], image3, box[i], tracked[i], face_in,tempS[i]);
 		Mat_<float> measurement(2,1);
 		if (tracked[i])
 		{

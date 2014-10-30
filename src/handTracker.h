@@ -56,10 +56,10 @@ class HandTracker
 		cv::Ptr<cv::BackgroundSubtractor> pMOG2;
 		cv::Mat fgMaskMOG2;
 		
-		double tempSR, tempSL;
+		double tempS[2];
 		
-		void checkHandsInitialisation (cv::Mat likelihood, cv::Mat image3, double xShift,cv::RotatedRect &roi, bool &track);
-		void updateHandPos (cv::Mat likelihood, cv::Mat image3, cv::RotatedRect &roi, bool &track, face &face_in);
+		void checkHandsInitialisation (cv::Mat likelihood, cv::Mat image3, double xShift,cv::RotatedRect &roi, bool &track, double &tempScore);
+		void updateHandPos (cv::Mat likelihood, cv::Mat image3, cv::RotatedRect &roi, bool &track, face &face_in, double &tempScore);
 		
 		void updateFaceInfo (const faceTracking::ROIArrayConstPtr& msg);
 		cv::Mat getHandLikelihood (cv::Mat input, face &face_in);
