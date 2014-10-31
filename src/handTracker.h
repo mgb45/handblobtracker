@@ -20,8 +20,8 @@
 #include <sstream>
 #include <string>
 #include <ros/package.h>
-#include "handBlobTracker/HFPose2D.h"
-#include "handBlobTracker/HFPose2DArray.h"
+#include "measurementproposals/HFPose2D.h"
+#include "measurementproposals/HFPose2DArray.h"
 #include <opencv2/video/background_segm.hpp>		
 
 #define lScoreThresh 0.02
@@ -56,9 +56,7 @@ class HandTracker
 		cv::Ptr<cv::BackgroundSubtractor> pMOG2;
 		cv::Mat fgMaskMOG2;
 		
-		double tempS[2];
-		
-		void checkHandsInitialisation (cv::Mat likelihood, cv::Mat image3, double xShift,cv::RotatedRect &roi, bool &track, double &tempScore);
+		void checkHandsInitialisation (cv::Mat likelihood, cv::Mat image3);//, double xShift,cv::RotatedRect &roi, bool &track, double &tempScore);
 		void updateHandPos (cv::Mat likelihood, cv::Mat image3, cv::RotatedRect &roi, bool &track, face &face_in, double &tempScore);
 		
 		void updateFaceInfo (const faceTracking::ROIArrayConstPtr& msg);
@@ -68,9 +66,9 @@ class HandTracker
 		
 		std::vector<cv::KalmanFilter> tracker;
 		std::vector<cv::RotatedRect> box;
-		bool tracked[2];
+		std::vector<double> score;
 		
-		handBlobTracker::HFPose2DArray pfPose;
+		measurementproposals::HFPose2DArray pfPose;
 };
 
 #endif
