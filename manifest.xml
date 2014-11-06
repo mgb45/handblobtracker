@@ -17,6 +17,7 @@
   <depend package="rospy"/>
   <depend package="message_filters"/>
   <depend package="faceTracking"/>
+  <depend package="measurementproposals"/>
 </package>
 
 

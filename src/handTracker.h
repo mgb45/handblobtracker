@@ -20,8 +20,8 @@
 #include <sstream>
 #include <string>
 #include <ros/package.h>
-#include "handBlobTracker/HFPose2D.h"
-#include "handBlobTracker/HFPose2DArray.h"
+#include "measurementproposals/HFPose2D.h"
+#include "measurementproposals/HFPose2DArray.h"
 #include <opencv2/video/background_segm.hpp>		
 
 #define lScoreThresh 0.02
@@ -70,7 +70,7 @@ class HandTracker
 		std::vector<cv::RotatedRect> box;
 		bool tracked[2];
 		
-		handBlobTracker::HFPose2DArray pfPose;
+		measurementproposals::HFPose2DArray pfPose;
 };
 
 #endif

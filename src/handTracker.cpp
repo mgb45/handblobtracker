@@ -11,7 +11,7 @@ HandTracker::HandTracker()
 	image_transport::ImageTransport it(nh); //ROS
 	
 	pub = it.advertise("/likelihood",1); //ROS
-	hand_face_pub = nh.advertise<handBlobTracker::HFPose2DArray>("/faceHandPose", 10);
+	hand_face_pub = nh.advertise<measurementproposals::HFPose2DArray>("/faceHandPose", 10);
 		
 	image_sub.subscribe(nh, "/rgb/image_color", 1); // requires camera stream input
 	roi_sub.subscribe(nh, "/faceROIs", 1); // requires face array input
@@ -421,27 +421,20 @@ void HandTracker::callback(const sensor_msgs::ImageConstPtr& immsg, const faceTr
 		img2.image = outputImage;			
 		pub.publish(img2.toImageMsg()); // publish result image
 		
-		handBlobTracker::HFPose2D rosHands;
-		handBlobTracker::HFPose2DArray rosHandsArr;
+		measurementproposals::HFPose2D rosHands;
+		measurementproposals::HFPose2DArray rosHandsArr;
+		rosHands.x = face_found.roi.x + int(face_found.roi.width/2.0);
+		rosHands.y = face_found.roi.y + int(face_found.roi.height/2.0);
+		rosHandsArr.measurements.push_back(rosHands);
+		rosHands.x = face_found.roi.x + int(face_found.roi.width/2.0);
+		rosHands.y = face_found.roi.y + 3.25/2.0*face_found.roi.height;
+		rosHandsArr.measurements.push_back(rosHands); //Neck
 		for (int i = 0; i < 2; i++)
 		{
 			rosHands.x = box[i].center.x;
 			rosHands.y = box[i].center.y;
 			rosHandsArr.measurements.push_back(rosHands);
-			rosHandsArr.valid.push_back(tracked[i]);
 		}
-		rosHandsArr.names.push_back("Left Hand");
-		rosHandsArr.names.push_back("Right Hand");
-		rosHands.x = face_found.roi.x + int(face_found.roi.width/2.0);
-		rosHands.y = face_found.roi.y + int(face_found.roi.height/2.0);
-		rosHandsArr.measurements.push_back(rosHands);
-		rosHandsArr.names.push_back("Head");
-		rosHands.x = face_found.roi.x + int(face_found.roi.width/2.0);
-		rosHands.y = face_found.roi.y + 3.25/2.0*face_found.roi.height;
-		rosHandsArr.measurements.push_back(rosHands); //Neck
-		rosHandsArr.names.push_back("Neck");
-		rosHandsArr.valid.push_back(true);
-		rosHandsArr.valid.push_back(true);
 		rosHandsArr.header = msg->header;
 		rosHandsArr.id = face_found.id;
 		hand_face_pub.publish(rosHandsArr);
