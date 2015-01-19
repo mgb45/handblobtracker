@@ -23,7 +23,7 @@ HandTracker::HandTracker()
 		
 	cv::Mat subImg1 = cv::Mat::zeros(50,50,CV_8UC3);
 	
-	int histSize[] = {35,35};
+	int histSize[] = {50,50};
 	float h_range[] = {0, 255};
 	float s_range[] = {0, 255};
 	const float* rangesh[] = {h_range,s_range};
@@ -61,8 +61,9 @@ void HandTracker::checkHandsInitialisation(cv::Mat likelihood, cv::Mat image3)
 			temp = adjustRect(temp,image3.size());
 			bestScore = cv::sum(likelihood(temp))[0]/(255.0*M_PI*temp.width*temp.height/4.0);
 						
-			if (((bestScore > lScoreInit)||(temp.width >= 5)||(temp.height >= 5))&&((roi.center.x<i+temp.width)&&(roi.center.x>i)&&(roi.center.y<j+temp.height)&&(roi.center.y>j)))
+			if ((bestScore > lScoreInit)&&(temp.width >= 5)&&(temp.height >= 5)&&(temp.width <= 150)&&(temp.height <= 150))//&&((roi.center.x<i+temp.width)&&(roi.center.x>i)&&(roi.center.y<j+temp.height)&&(roi.center.y>j)))
 			{
+				//ROS_INFO("Best score: %f",bestScore);
 				box.push_back(roi);
 				score.push_back(bestScore);
 				try
@@ -122,7 +123,7 @@ cv::Mat HandTracker::getHandLikelihood(cv::Mat input, face &face_in)
 	cvtColor(input,image4,CV_BGR2Lab);
 				
 	MatND hist;
-	int histSize[] = {35,35};
+	int histSize[] = {50,50};
 	float h_range[] = {0, 255};
 	float s_range[] = {0, 255};
 	const float* rangesh[] = {h_range,s_range};
@@ -133,11 +134,13 @@ cv::Mat HandTracker::getHandLikelihood(cv::Mat input, face &face_in)
 	rec_reduced.width = face_in.roi.width - 2*face_in.roi.width/4;
 	rec_reduced.height = face_in.roi.height- 2*face_in.roi.height/4;
 	
-	pMOG2->operator()(input,fgMaskMOG2,-10);
+	//pMOG2->operator()(input,fgMaskMOG2,-10);
+	pMOG2->operator()(input,fgMaskMOG2,0.0005);
 	
 	// Generate output image
 	cv::Mat foreground(image4.size(),CV_8UC3,cv::Scalar(255,255,255)); // all white image
 	image4.copyTo(foreground,fgMaskMOG2); // bg pixels not copied
+	//image4.copyTo(foreground,input); // bg pixels not copied
 	
 	cv::Mat subImg1 = image4(rec_reduced);
 	

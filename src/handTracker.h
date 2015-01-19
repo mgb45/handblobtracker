@@ -25,7 +25,7 @@
 #include <opencv2/video/background_segm.hpp>		
 
 #define lScoreThresh 0.02
-#define lScoreInit 0.14
+#define lScoreInit 0.05
 		
 struct face {
 	cv::Rect roi;
