@@ -11,10 +11,9 @@ HandTracker::HandTracker()
 	image_transport::ImageTransport it(nh); //ROS
 	
 	pub = it.advertise("/likelihood",1); //ROS
-	hand_face_pub = nh.advertise<measurementproposals::HFPose2DArray>("/faceHandPose", 10);
-		
-	image_sub.subscribe(nh, "/rgb/image_color", 1); // requires camera stream input
-	roi_sub.subscribe(nh, "/faceROIs", 1); // requires face array input
+			
+	image_sub.subscribe(nh, "/rgb/image_color", 15); // requires camera stream input
+	roi_sub.subscribe(nh, "/faceROIs", 10); // requires face array input
 	
 	sync = new message_filters::TimeSynchronizer<sensor_msgs::Image, faceTracking::ROIArray>(image_sub,roi_sub,10);
 	sync->registerCallback(boost::bind(&HandTracker::callback, this, _1, _2));
@@ -30,54 +29,13 @@ HandTracker::HandTracker()
 	int channels[] = {1, 2};
 	calcHist(&subImg1,1,channels,Mat(),hist1,2,histSize, rangesh, true, false);
 	
-	pMOG2 = new BackgroundSubtractorMOG2();
+	pMOG2 = new BackgroundSubtractorMOG2(3,16,true);
 	  
 }
 
 HandTracker::~HandTracker()
 {
 	delete sync;
-}
-
-void HandTracker::checkHandsInitialisation(cv::Mat likelihood, cv::Mat image3)
-{
-	cv::RotatedRect roi;
-	double bestScore = 0;
-	/********Left right hand initialisation ************/
-	cv::Rect temp;
-	box.clear();
-	score.clear();
-	for (int i = 0; i <= (int)image3.cols-(int)image3.cols/8; i+=(int)image3.cols/8)
-	{
-		for (int j = 0; j <= (int)image3.rows-(int)image3.rows/8; j+=(int)image3.rows/8)
-		{
-			temp.x = i;
-			temp.y = j;
-			temp.width = (int)image3.cols/8;
-			temp.height = (int)image3.rows/8;
-			rectangle(image3, temp, Scalar(255,0,0), 2, 8, 0);
-			roi = CamShift(likelihood, temp, TermCriteria( CV_TERMCRIT_EPS | CV_TERMCRIT_ITER, 5, 1 ));
-			temp = roi.boundingRect();
-			temp = adjustRect(temp,image3.size());
-			bestScore = cv::sum(likelihood(temp))[0]/(255.0*M_PI*temp.width*temp.height/4.0);
-						
-			if ((bestScore > lScoreInit)&&(temp.width >= 5)&&(temp.height >= 5)&&(temp.width <= 150)&&(temp.height <= 150))//&&((roi.center.x<i+temp.width)&&(roi.center.x>i)&&(roi.center.y<j+temp.height)&&(roi.center.y>j)))
-			{
-				//ROS_INFO("Best score: %f",bestScore);
-				box.push_back(roi);
-				score.push_back(bestScore);
-				try
-				{
-					ellipse(image3, roi, Scalar(255,0,0), 2, 8);
-				}
-				catch( cv::Exception& e )
-				{
-					const char* err_msg = e.what();
-					ROS_ERROR("%s",err_msg);
-				}	
-			}
-		}
-	}
 }
 
 cv::Rect HandTracker::adjustRect(cv::Rect temp,cv::Size size)
@@ -88,32 +46,6 @@ cv::Rect HandTracker::adjustRect(cv::Rect temp,cv::Size size)
 	newRect.width = min(temp.width,size.width-newRect.x);
 	newRect.height = min(temp.height,size.height-newRect.y);
 	return newRect;
-}
-
-// Hand detector: given likelihood of skin, detects hands and intialising area and uses camshift to track them
-void HandTracker::HandDetector(cv::Mat likelihood, face &face_in, cv::Mat image3)
-{
-	//Set face probability to zero, not a hand
-	cv::Rect roi_enlarged; // enlarge face to cover neck and ear blobs
-	roi_enlarged.height = face_in.roi.height*1.9;
-	roi_enlarged.width = face_in.roi.width*1.5;
-	roi_enlarged.x = face_in.roi.width/2 + face_in.roi.x - roi_enlarged.width/2;
-	roi_enlarged.y = face_in.roi.height/2 + face_in.roi.y - roi_enlarged.height/3;
-	roi_enlarged = adjustRect(roi_enlarged,image3.size());
-		
-	try
-	{
-		ellipse(likelihood, RotatedRect(Point2f(roi_enlarged.x+roi_enlarged.width/2.0,roi_enlarged.y+roi_enlarged.height/2.0),Size2f(roi_enlarged.width,roi_enlarged.height),0.0), Scalar(0,0,0), -1, 8);
-	}
-	catch( cv::Exception& e )
-	{
-		const char* err_msg = e.what();
-		ROS_ERROR("%s",err_msg);
-	}	
-	
-	cvtColor(likelihood,image3,CV_GRAY2RGB);
-	
-	checkHandsInitialisation(likelihood,image3);
 }
 
 // Gets skin colour likelihood map from face using back projection in Lab
@@ -135,19 +67,19 @@ cv::Mat HandTracker::getHandLikelihood(cv::Mat input, face &face_in)
 	rec_reduced.height = face_in.roi.height- 2*face_in.roi.height/4;
 	
 	//pMOG2->operator()(input,fgMaskMOG2,-10);
-	pMOG2->operator()(input,fgMaskMOG2,0.0005);
+	pMOG2->operator()(input,fgMaskMOG2,0.0002);
 	
 	// Generate output image
 	cv::Mat foreground(image4.size(),CV_8UC3,cv::Scalar(255,255,255)); // all white image
 	image4.copyTo(foreground,fgMaskMOG2); // bg pixels not copied
-	//image4.copyTo(foreground,input); // bg pixels not copied
+//	image4.copyTo(foreground,input); // bg pixels copied
 	
 	cv::Mat subImg1 = image4(rec_reduced);
 	
 	int channels[] = {1, 2};
 	calcHist(&subImg1,1,channels,Mat(),hist,2,histSize, rangesh, true, false);
 	normalize(hist, hist, 0, 255, NORM_MINMAX, -1, Mat());
-	hist1 = 0.95*hist1 + 0.05*hist;
+	hist1 = 0.5*hist1 + 0.5*hist;
 	
 	cv::Mat temp1(input.rows,input.cols,CV_64F);
 	calcBackProject(&foreground,1,channels,hist1,temp1,rangesh, 1, true);
@@ -160,16 +92,17 @@ cv::Mat HandTracker::getHandLikelihood(cv::Mat input, face &face_in)
 	erode(temp1,temp1,element1);
 	dilate(temp1,temp1,element2);
 
-	cv::Mat image3 = cv::Mat::zeros(image4.rows,image4.cols,CV_8UC3);
-	
-	// Detect hands and update pose estimate
-	HandDetector(temp1,face_in,image3);
-				
-	// Draw face rectangles on display image
+	//Set face probability to zero, not a hand
+	cv::Rect roi_enlarged; // enlarge face to cover neck and ear blobs
+	roi_enlarged.height = face_in.roi.height*2.4;
+	roi_enlarged.width = face_in.roi.width*1.8;
+	roi_enlarged.x = face_in.roi.width/2 + face_in.roi.x - roi_enlarged.width/2;
+	roi_enlarged.y = face_in.roi.height/2 + face_in.roi.y - roi_enlarged.height/3;
+	roi_enlarged = adjustRect(roi_enlarged,temp1.size());
+		
 	try
 	{
-		rectangle(image3, Point(face_in.roi.x,face_in.roi.y), Point(face_in.roi.x+face_in.roi.width,face_in.roi.y+face_in.roi.height), Scalar(255,255,255), 4, 8, 0);
-		rectangle(image3, Point(rec_reduced.x,rec_reduced.y), Point(rec_reduced.x+rec_reduced.width,rec_reduced.y+rec_reduced.height), Scalar(0,255,0), 4, 8, 0);
+		ellipse(temp1, RotatedRect(Point2f(roi_enlarged.x+roi_enlarged.width/2.0,roi_enlarged.y+roi_enlarged.height/2.0),Size2f(roi_enlarged.width,roi_enlarged.height),0.0), Scalar(0,0,0), -1, 8);
 	}
 	catch( cv::Exception& e )
 	{
@@ -177,7 +110,7 @@ cv::Mat HandTracker::getHandLikelihood(cv::Mat input, face &face_in)
 		ROS_ERROR("%s",err_msg);
 	}	
 		
-	return image3;
+	return temp1;
 }
 
 // Update tracked face with latest info
@@ -225,28 +158,11 @@ void HandTracker::callback(const sensor_msgs::ImageConstPtr& immsg, const faceTr
 		outputImage = getHandLikelihood(image,face_found);
 
 		cv_bridge::CvImage img2;
-		img2.encoding = "rgb8";
+		img2.encoding = "mono8";
 		img2.header = immsg->header;
 		img2.image = outputImage;			
 		pub.publish(img2.toImageMsg()); // publish result image
-		
-		measurementproposals::HFPose2D rosHands;
-		measurementproposals::HFPose2DArray rosHandsArr;
-		rosHands.x = face_found.roi.x + int(face_found.roi.width/2.0);
-		rosHands.y = face_found.roi.y + int(face_found.roi.height/2.0);
-		rosHandsArr.measurements.push_back(rosHands);
-		rosHands.x = face_found.roi.x + int(face_found.roi.width/2.0);
-		rosHands.y = face_found.roi.y + 3.25/2.0*face_found.roi.height;
-		rosHandsArr.measurements.push_back(rosHands); //Neck
-		for (int i = 0; i < (int)box.size(); i++)
-		{
-			rosHands.x = box[i].center.x;
-			rosHands.y = box[i].center.y;
-			rosHandsArr.measurements.push_back(rosHands);
-		}
-		rosHandsArr.header = msg->header;
-		rosHandsArr.id = face_found.id;
-		hand_face_pub.publish(rosHandsArr);
+	
 	}
 	catch (cv_bridge::Exception& e)
 	{
