@@ -20,17 +20,19 @@ HandTracker::HandTracker()
 	
 	face_found.views = 0;
 		
-	cv::Mat subImg1 = cv::Mat::zeros(50,50,CV_8UC3);
+	cv::Mat subImg1 = cv::Mat(10,10,CV_8UC3);
+	randu(subImg1,0,255);
 	
-	int histSize[] = {50,50};
-	float h_range[] = {0, 255};
-	float s_range[] = {0, 255};
-	const float* rangesh[] = {h_range,s_range};
+	int histSize[] = {40,40};
+	float r_range[] = {0, 255};
+	float g_range[] = {0, 255};
+	float b_range[] = {0, 255};
+	const float* ranges[] = {r_range,g_range};
 	int channels[] = {1, 2};
-	calcHist(&subImg1,1,channels,Mat(),hist1,2,histSize, rangesh, true, false);
+	calcHist(&subImg1,1,channels,Mat(),hist1,2,histSize, ranges, true, false);
 	
-	pMOG2 = new BackgroundSubtractorMOG2(3,16,true);
-	  
+	pMOG2 = new BackgroundSubtractorMOG2(30,15,false);
+		  
 }
 
 HandTracker::~HandTracker()
@@ -53,56 +55,71 @@ cv::Mat HandTracker::getHandLikelihood(cv::Mat input, face &face_in)
 {
 	cv::Mat image4;
 	cvtColor(input,image4,CV_BGR2Lab);
-				
-	MatND hist;
-	int histSize[] = {50,50};
-	float h_range[] = {0, 255};
-	float s_range[] = {0, 255};
-	const float* rangesh[] = {h_range,s_range};
 	
 	cv::Rect rec_reduced;
-	rec_reduced.x = face_in.roi.x+ face_in.roi.width/4;
-	rec_reduced.y = face_in.roi.y+ face_in.roi.height/4;
-	rec_reduced.width = face_in.roi.width - 2*face_in.roi.width/4;
-	rec_reduced.height = face_in.roi.height- 2*face_in.roi.height/4;
+	//roi_enlarged.height = face_in.roi.height/1.6;
+	//roi_enlarged.width = face_in.roi.width/2;
+	//roi_enlarged.x = face_in.roi.width/2 + face_in.roi.x - roi_enlarged.width/2;
+	//roi_enlarged.y = face_in.roi.y;// - roi_enlarged.height/5;
+	//roi_enlarged = adjustRect(roi_enlarged,temp1.size());
+	rec_reduced.x = face_in.roi.width/2 + face_in.roi.x - face_in.roi.width/8;
+	rec_reduced.y = face_in.roi.y + 0.25*face_in.roi.height - face_in.roi.height/8;
+	rec_reduced.width = 2*face_in.roi.width/8;
+	rec_reduced.height = 2*face_in.roi.height/8;
+	
 	
 	//pMOG2->operator()(input,fgMaskMOG2,-10);
-	pMOG2->operator()(input,fgMaskMOG2,0.0002);
+	cv::Mat fgMaskMOG;
+	pMOG2->operator()(input,fgMaskMOG,0.0005);
+	//GaussianBlur(fgMaskMOG, fgMaskMOG, cv::Size(7,7), 3, 93, BORDER_DEFAULT);
 	
 	// Generate output image
-	cv::Mat foreground(image4.size(),CV_8UC3,cv::Scalar(255,255,255)); // all white image
-	image4.copyTo(foreground,fgMaskMOG2); // bg pixels not copied
-//	image4.copyTo(foreground,input); // bg pixels copied
+	cv::Mat foreground; // all white image
+	image4.copyTo(foreground,fgMaskMOG); // bg pixels not copied
+	//image4.copyTo(foreground); // bg pixels copied
 	
 	cv::Mat subImg1 = image4(rec_reduced);
 	
-	int channels[] = {1, 2};
-	calcHist(&subImg1,1,channels,Mat(),hist,2,histSize, rangesh, true, false);
-	normalize(hist, hist, 0, 255, NORM_MINMAX, -1, Mat());
-	hist1 = 0.5*hist1 + 0.5*hist;
+	MatND hist;
+	int histSize[] = {20,20,20};
+	float r_range[] = {0, 255};
+	float g_range[] = {0, 255};
+	float b_range[] = {0, 255};
+	const float* ranges[] = {r_range,g_range,b_range};
+	int channels[] = {0,1,2};
+	calcHist(&subImg1,1,channels,Mat(),hist,3,histSize, ranges, true, false);
+	//normalize(hist, hist, 0, 255, NORM_MINMAX, -1, Mat());
+	//hist1 = hist1 + hist;
 	
-	cv::Mat temp1(input.rows,input.cols,CV_64F);
-	calcBackProject(&foreground,1,channels,hist1,temp1,rangesh, 1, true);
+	cv::Mat temp1;
+	calcBackProject(&foreground,1,channels,hist,temp1,ranges, 1, true);
+	normalize(temp1, temp1, 0, 255, NORM_MINMAX, -1, Mat());
+	//temp1 = temp1;
 	
-	Mat element0 = getStructuringElement(MORPH_ELLIPSE, Size(7,7), Point(3,3));
-	Mat element1 = getStructuringElement(MORPH_ELLIPSE, Size(11,11), Point(5,5));
-	Mat element2 = getStructuringElement(MORPH_ELLIPSE, Size(5,5), Point(2,2));
+	//Mat element0 = getStructuringElement(MORPH_ELLIPSE, Size(15,15), Point(9,9));
+	////Mat element1 = getStructuringElement(MORPH_ELLIPSE, Size(11,11), Point(5,5));
+	//Mat element2 = getStructuringElement(MORPH_ELLIPSE, Size(7,7), Point(2,2));
+	//Mat element3 = getStructuringElement(MORPH_ELLIPSE, Size(4,4), Point(2,2));
 	
-	dilate(temp1,temp1,element0);
-	erode(temp1,temp1,element1);
-	dilate(temp1,temp1,element2);
-
+	////erode(fgMaskMOG,fgMaskMOG,element3);
+	////dilate(fgMaskMOG,fgMaskMOG,element0);
+	////~ erode(fgMaskMOG,fgMaskMOG,element1);
+	////~ dilate(fgMaskMOG,fgMaskMOG,element2);
+	//dilate(temp1,temp1,element3);
+	//erode(temp1,temp1,element2);	
+	
 	//Set face probability to zero, not a hand
 	cv::Rect roi_enlarged; // enlarge face to cover neck and ear blobs
-	roi_enlarged.height = face_in.roi.height*2.4;
-	roi_enlarged.width = face_in.roi.width*1.8;
+	roi_enlarged.height = face_in.roi.height/1.5;
+	roi_enlarged.width = face_in.roi.width/2;
 	roi_enlarged.x = face_in.roi.width/2 + face_in.roi.x - roi_enlarged.width/2;
-	roi_enlarged.y = face_in.roi.height/2 + face_in.roi.y - roi_enlarged.height/3;
+	roi_enlarged.y = face_in.roi.y;// - roi_enlarged.height/5;
 	roi_enlarged = adjustRect(roi_enlarged,temp1.size());
 		
 	try
 	{
 		ellipse(temp1, RotatedRect(Point2f(roi_enlarged.x+roi_enlarged.width/2.0,roi_enlarged.y+roi_enlarged.height/2.0),Size2f(roi_enlarged.width,roi_enlarged.height),0.0), Scalar(0,0,0), -1, 8);
+		//ellipse(temp1, RotatedRect(Point2f(rec_reduced.x+rec_reduced.width/2.0,rec_reduced.y+rec_reduced.height/2.0),Size2f(rec_reduced.width,rec_reduced.height),0.0), Scalar(255,0,0), -1, 8);
 	}
 	catch( cv::Exception& e )
 	{

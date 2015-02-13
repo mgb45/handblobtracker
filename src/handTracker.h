@@ -60,7 +60,6 @@ class HandTracker
 		
 		cv::MatND hist1;
 		cv::Ptr<cv::BackgroundSubtractor> pMOG2;
-		cv::Mat fgMaskMOG2;
 					
 		void updateFaceInfo (const faceTracking::ROIArrayConstPtr& msg);
 		cv::Mat getHandLikelihood (cv::Mat input, face &face_in);
