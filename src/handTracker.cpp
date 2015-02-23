@@ -62,38 +62,38 @@ cv::Mat HandTracker::getHandLikelihood(cv::Mat input, face &face_in)
 	rec_reduced.width = face_in.roi.width/3;
 	rec_reduced.height = face_in.roi.height/3;
 	
-	cv::Mat mask1 = cv::Mat::zeros(input.rows,input.cols,CV_8UC1);
-	try
-	{
-		ellipse(mask1, RotatedRect(Point2f(face_in.roi.x+face_in.roi.width/2.0,input.rows/2.0),Size2f(face_in.roi.width*8,input.rows),0.0), Scalar(255,255,255), -1, 8);
-	}
-	catch( cv::Exception& e )
-	{
-		const char* err_msg = e.what();
-		ROS_ERROR("%s",err_msg);
-	}	
+	//cv::Mat mask1 = cv::Mat::zeros(input.rows,input.cols,CV_8UC1);
+	//try
+	//{
+		//ellipse(mask1, RotatedRect(Point2f(face_in.roi.x+face_in.roi.width/2.0,input.rows/2.0),Size2f(face_in.roi.width*8,input.rows),0.0), Scalar(255,255,255), -1, 8);
+	//}
+	//catch( cv::Exception& e )
+	//{
+		//const char* err_msg = e.what();
+		//ROS_ERROR("%s",err_msg);
+	//}	
 		
 	//image4 = image4&mask1;
 	
-	cv::Mat fgMaskMOG; // all white image
+	//cv::Mat fgMaskMOG; // all white image
 	//pMOG2->operator()(input,fgMaskMOG2,-10);
 	
-	pMOG2->operator()(input,fgMaskMOG,1e-3);
+	//pMOG2->operator()(input,fgMaskMOG,1e-3);
 	
 		//Mat element0 = getStructuringElement(MORPH_ELLIPSE, Size(7,7), Point(3,3));
 	//Mat element1 = getStructuringElement(MORPH_ELLIPSE, Size(5,5), Point(2,2));
-	Mat element2 = getStructuringElement(MORPH_ELLIPSE, Size(3,3), Point(2,2));
+	//Mat element2 = getStructuringElement(MORPH_ELLIPSE, Size(3,3), Point(2,2));
 	
 	//erode(temp1,temp1,element1);
 	//dilate(temp1,temp1,element0);
-	dilate(fgMaskMOG,fgMaskMOG,element2);
-	dilate(fgMaskMOG,fgMaskMOG,element2);
+	//dilate(fgMaskMOG,fgMaskMOG,element2);
+	//dilate(fgMaskMOG,fgMaskMOG,element2);
 	
 	// Generate output image
 	cv::Mat foreground; // all white image
 	
 	//image4.copyTo(foreground,fgMaskMOG); // bg pixels not copied
-	image4.copyTo(foreground,mask1&fgMaskMOG); // bg pixels copied
+	image4.copyTo(foreground); // bg pixels copied
 		
 	cv::Mat subImg1 = image4(rec_reduced);
 	
@@ -106,10 +106,10 @@ cv::Mat HandTracker::getHandLikelihood(cv::Mat input, face &face_in)
 	int channels[] = {1, 2};
 	calcHist(&subImg1,1,channels,Mat(),hist,2,histSize, ranges, true, false);
 	//normalize(hist, hist, 0, 255, NORM_MINMAX, -1, Mat());
-	hist1 = 0.95*hist1 + 0.05*hist;
+	//hist1 = 0.95*hist1 + 0.05*hist;
 	
 	cv::Mat temp1(input.rows,input.cols,CV_64F);
-	calcBackProject(&foreground,1,channels,hist1,temp1,ranges, 1, true);
+	calcBackProject(&foreground,1,channels,hist,temp1,ranges, 1, true);
 	normalize(temp1, temp1, 0, 255, NORM_MINMAX, -1, Mat());
 	
 	medianBlur(temp1,temp1,5);
@@ -122,8 +122,8 @@ cv::Mat HandTracker::getHandLikelihood(cv::Mat input, face &face_in)
 
 	//Set face probability to zero, not a hand
 	cv::Rect roi_enlarged; // enlarge face to cover neck and ear blobs
-	roi_enlarged.height = face_in.roi.height*2.4;
-	roi_enlarged.width = face_in.roi.width*1.8;
+	roi_enlarged.height = face_in.roi.height*2.5;
+	roi_enlarged.width = face_in.roi.width*1.6;
 	roi_enlarged.x = face_in.roi.width/2 + face_in.roi.x - roi_enlarged.width/2;
 	roi_enlarged.y = face_in.roi.height/2 + face_in.roi.y - roi_enlarged.height/3;
 	roi_enlarged = adjustRect(roi_enlarged,temp1.size());
@@ -131,7 +131,7 @@ cv::Mat HandTracker::getHandLikelihood(cv::Mat input, face &face_in)
 	try
 	{
 		ellipse(temp1, RotatedRect(Point2f(roi_enlarged.x+roi_enlarged.width/2.0,roi_enlarged.y+roi_enlarged.height/2.0),Size2f(roi_enlarged.width,roi_enlarged.height),0.0), Scalar(0,0,0), -1, 8);
-		rectangle(temp1, Point(0,temp1.rows-100), Point(temp1.cols,temp1.rows), Scalar(0,0,0), -1, 8);
+		//rectangle(temp1, Point(0,temp1.rows-100), Point(temp1.cols,temp1.rows), Scalar(0,0,0), -1, 8);
 		
 	}
 	catch( cv::Exception& e )
