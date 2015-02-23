@@ -23,7 +23,7 @@ HandTracker::HandTracker()
 	cv::Mat subImg1 = cv::Mat::zeros(50,50,CV_8UC3);
 	randu(subImg1,0,255);
 	
-	int histSize[] = {25,25};
+	int histSize[] = {22,22};
 	float h_range[] = {0, 255};
 	float s_range[] = {0, 255};
 	float v_range[] = {0, 255};
@@ -98,7 +98,7 @@ cv::Mat HandTracker::getHandLikelihood(cv::Mat input, face &face_in)
 	cv::Mat subImg1 = image4(rec_reduced);
 	
 	MatND hist;
-	int histSize[] = {25,25};
+	int histSize[] = {22,22};
 	float r_range[] = {0, 255};
 	float g_range[] = {0, 255};
 	float b_range[] = {0, 255};
