@@ -23,7 +23,7 @@ HandTracker::HandTracker()
 	cv::Mat subImg1 = cv::Mat::zeros(50,50,CV_8UC3);
 	randu(subImg1,0,255);
 	
-	int histSize[] = {25,25};
+	int histSize[] = {10,10};
 	float h_range[] = {0, 255};
 	float s_range[] = {0, 255};
 	float v_range[] = {0, 255};
@@ -31,7 +31,7 @@ HandTracker::HandTracker()
 	int channels[] = {1,2};
 	calcHist(&subImg1,1,channels,Mat(),hist1,2,histSize, rangesh, true, false);
 	
-	pMOG2 = new BackgroundSubtractorMOG2(55,10,true);
+	pMOG2 = new BackgroundSubtractorMOG2(55,5,true);
 	  
 }
 
@@ -78,7 +78,7 @@ cv::Mat HandTracker::getHandLikelihood(cv::Mat input, face &face_in)
 	cv::Mat fgMaskMOG; // all white image
 	//pMOG2->operator()(input,fgMaskMOG2,-10);
 	
-	pMOG2->operator()(input,fgMaskMOG,1e-3);
+	pMOG2->operator()(input,fgMaskMOG,5e-3);
 	
 		//Mat element0 = getStructuringElement(MORPH_ELLIPSE, Size(7,7), Point(3,3));
 	//Mat element1 = getStructuringElement(MORPH_ELLIPSE, Size(5,5), Point(2,2));
@@ -98,7 +98,7 @@ cv::Mat HandTracker::getHandLikelihood(cv::Mat input, face &face_in)
 	cv::Mat subImg1 = image4(rec_reduced);
 	
 	MatND hist;
-	int histSize[] = {25,25};
+	int histSize[] = {10,10};
 	float r_range[] = {0, 255};
 	float g_range[] = {0, 255};
 	float b_range[] = {0, 255};
@@ -112,7 +112,7 @@ cv::Mat HandTracker::getHandLikelihood(cv::Mat input, face &face_in)
 	calcBackProject(&foreground,1,channels,hist1,temp1,ranges, 1, true);
 	normalize(temp1, temp1, 0, 255, NORM_MINMAX, -1, Mat());
 	
-	medianBlur(temp1,temp1,5);
+	medianBlur(temp1,temp1,15);
 	
 	//erode(temp1,temp1,element1);
 	//dilate(temp1,temp1,element0);
