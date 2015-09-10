@@ -11,12 +11,12 @@ HandTracker::HandTracker()
 	image_transport::ImageTransport it(nh); //ROS
 	
 	pub = it.advertise("/likelihood",1); //ROS
-	hand_face_pub = nh.advertise<measurementproposals::HFPose2DArray>("/faceHandPose", 10);
+	hand_face_pub = nh.advertise<handblobtracker::HFPose2DArray>("/faceHandPose", 10);
 		
 	image_sub.subscribe(nh, "/rgb/image_color", 1); // requires camera stream input
 	roi_sub.subscribe(nh, "/faceROIs", 1); // requires face array input
 	
-	sync = new message_filters::TimeSynchronizer<sensor_msgs::Image, faceTracking::ROIArray>(image_sub,roi_sub,10);
+	sync = new message_filters::TimeSynchronizer<sensor_msgs::Image, facetracking::ROIArray>(image_sub,roi_sub,10);
 	sync->registerCallback(boost::bind(&HandTracker::callback, this, _1, _2));
 	
 	face_found.views = 0;
@@ -361,7 +361,7 @@ cv::Mat HandTracker::getHandLikelihood(cv::Mat input, face &face_in)
 }
 
 // Update tracked face with latest info
-void HandTracker::updateFaceInfo(const faceTracking::ROIArrayConstPtr& msg)
+void HandTracker::updateFaceInfo(const facetracking::ROIArrayConstPtr& msg)
 {
 	if (msg->ROIs.size() > 0)
 	{
@@ -395,7 +395,7 @@ void HandTracker::updateFaceInfo(const faceTracking::ROIArrayConstPtr& msg)
 }
 
 // image and face roi callback
-void HandTracker::callback(const sensor_msgs::ImageConstPtr& immsg, const faceTracking::ROIArrayConstPtr& msg)
+void HandTracker::callback(const sensor_msgs::ImageConstPtr& immsg, const facetracking::ROIArrayConstPtr& msg)
 {
 	try
 	{	
@@ -421,8 +421,8 @@ void HandTracker::callback(const sensor_msgs::ImageConstPtr& immsg, const faceTr
 		img2.image = outputImage;			
 		pub.publish(img2.toImageMsg()); // publish result image
 		
-		measurementproposals::HFPose2D rosHands;
-		measurementproposals::HFPose2DArray rosHandsArr;
+		handblobtracker::HFPose2D rosHands;
+		handblobtracker::HFPose2DArray rosHandsArr;
 		rosHands.x = face_found.roi.x + int(face_found.roi.width/2.0);
 		rosHands.y = face_found.roi.y + int(face_found.roi.height/2.0);
 		rosHandsArr.measurements.push_back(rosHands);

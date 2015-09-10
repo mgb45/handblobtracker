@@ -1,5 +1,5 @@
  Header header
  string id
- handBlobTracker/HFPose2D[] measurements
+ handblobtracker/HFPose2D[] measurements
  string[] names
  bool[] valid
