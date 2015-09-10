@@ -14,7 +14,7 @@
 #include "sensor_msgs/Image.h"
 #include "sensor_msgs/RegionOfInterest.h"
 #include "geometry_msgs/Point.h"
-#include "faceTracking/ROIArray.h"
+#include "facetracking/ROIArray.h"
 #include <message_filters/subscriber.h>
 #include <message_filters/time_synchronizer.h>
 #include <sstream>
@@ -50,11 +50,11 @@ class HandTracker
 		ros::NodeHandle nh;
 		image_transport::Publisher pub;
 						
-		void callback(const sensor_msgs::ImageConstPtr& immsg, const faceTracking::ROIArrayConstPtr& msg); // Detected face array/ image callback
+		void callback(const sensor_msgs::ImageConstPtr& immsg, const facetracking::ROIArrayConstPtr& msg); // Detected face array/ image callback
 
-		message_filters::TimeSynchronizer<sensor_msgs::Image, faceTracking::ROIArray>* sync;
+		message_filters::TimeSynchronizer<sensor_msgs::Image, facetracking::ROIArray>* sync;
 		message_filters::Subscriber<sensor_msgs::Image> image_sub;
-		message_filters::Subscriber<faceTracking::ROIArray> roi_sub;
+		message_filters::Subscriber<facetracking::ROIArray> roi_sub;
 		face face_found;
 		
 		
@@ -62,7 +62,7 @@ class HandTracker
 		cv::Ptr<cv::BackgroundSubtractor> pMOG2;
 		cv::Mat fgMaskMOG2;
 					
-		void updateFaceInfo (const faceTracking::ROIArrayConstPtr& msg);
+		void updateFaceInfo (const facetracking::ROIArrayConstPtr& msg);
 		cv::Mat getHandLikelihood (cv::Mat input, face &face_in);
 		cv::Rect adjustRect(cv::Rect temp,cv::Size size);
 	
