@@ -423,18 +423,21 @@ void HandTracker::callback(const sensor_msgs::ImageConstPtr& immsg, const facetr
 		
 		handblobtracker::HFPose2D rosHands;
 		handblobtracker::HFPose2DArray rosHandsArr;
-		rosHands.x = face_found.roi.x + int(face_found.roi.width/2.0);
-		rosHands.y = face_found.roi.y + int(face_found.roi.height/2.0);
-		rosHandsArr.measurements.push_back(rosHands);
-		rosHands.x = face_found.roi.x + int(face_found.roi.width/2.0);
-		rosHands.y = face_found.roi.y + 3.25/2.0*face_found.roi.height;
-		rosHandsArr.measurements.push_back(rosHands); //Neck
 		for (int i = 0; i < 2; i++)
 		{
 			rosHands.x = box[i].center.x;
 			rosHands.y = box[i].center.y;
 			rosHandsArr.measurements.push_back(rosHands);
+            rosHandsArr.valid.push_back(true); //Hands
 		}
+        rosHands.x = face_found.roi.x + int(face_found.roi.width/2.0);
+		rosHands.y = face_found.roi.y + int(face_found.roi.height/2.0);
+		rosHandsArr.measurements.push_back(rosHands);
+        rosHandsArr.valid.push_back(true); //Head
+		rosHands.x = face_found.roi.x + int(face_found.roi.width/2.0);
+		rosHands.y = face_found.roi.y + 3.25/2.0*face_found.roi.height;
+		rosHandsArr.measurements.push_back(rosHands); //Neck
+        rosHandsArr.valid.push_back(true); //Neck
 		rosHandsArr.header = msg->header;
 		rosHandsArr.id = face_found.id;
 		hand_face_pub.publish(rosHandsArr);
