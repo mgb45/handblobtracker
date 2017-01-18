@@ -33,19 +33,17 @@ HandTracker::HandTracker()
 	int channels[] = {1, 2};
 	calcHist(&subImg1,1,channels,Mat(),hist1,2,histSize, rangesh, true, false);
 	
-	pMOG2 = new BackgroundSubtractorMOG2();
+	pMOG2 = createBackgroundSubtractorMOG2();
 	  
-	double dt = 0.1; // actually 1/ 30fps, but uncertainty in acc tuned for this
+	float dt = 0.1; // actually 1/ 30fps, but uncertainty in acc tuned for this
 	for (int i = 0; i < 2; i++)
 	{
 		cv::KalmanFilter KF;
 		KF.init(6,2,0,CV_32F);
-		KF.transitionMatrix = *(Mat_<float> (6, 6) << 1, 0, dt, 0, dt*dt, 0, 
-													0, 1, 0, dt, 0, dt*dt, 
-													0, 0, 1, 0, dt, 0, 
-													0, 0, 0, 1, 0, dt, 
-													0, 0, 0, 0, 1, 
-													0, 0, 0, 0, 0, 0, 1);
+		
+		float dummy[36] = {1, 0, dt, 0, dt*dt, 0, 0,1, 0, dt, 0, dt*dt, 0, 0, 1, 0, dt, 0, 0, 0, 0, 1, 0, dt,0, 0, 0, 0, 1,0, 0, 0, 0, 0, 0, 1};
+		KF.transitionMatrix = cv::Mat(6,6,CV_32F,dummy); 
+			
 		KF.statePre.at<float>(0) = 0;
 		KF.statePre.at<float>(1) = 0;
 		KF.statePre.at<float>(2) = 0;
@@ -54,12 +52,9 @@ HandTracker::HandTracker()
 		KF.statePre.at<float>(5) = 0;
 		
 		setIdentity(KF.measurementMatrix);
-		KF.processNoiseCov = *(Mat_<float> (6, 6) << 0, 0, 0, 0, 0, 0, 
-													0, 0, 0, 0, 0, 0, 
-													0, 0, 0, 0, 0, 0,
-													0, 0, 0, 0, 0, 0,
-													0, 0, 0, 0, dt*100000, 0,
-													0, 0, 0, 0, 0, dt*100000);
+
+		float dummycov[36] = {0, 0, 0, 0, 0, 0,	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, dt*100000, 0, 0, 0, 0, 0, 0, dt*100000};
+		KF.processNoiseCov = cv::Mat(6,6,CV_32F,dummycov);
 		setIdentity(KF.measurementNoiseCov, Scalar::all(5));
 		setIdentity(KF.errorCovPost, Scalar::all(500000));
 		setIdentity(KF.errorCovPre, Scalar::all(500000));
@@ -322,7 +317,7 @@ cv::Mat HandTracker::getHandLikelihood(cv::Mat input, face &face_in)
 	rec_reduced.width = face_in.roi.width - 2*face_in.roi.width/4;
 	rec_reduced.height = face_in.roi.height- 2*face_in.roi.height/4;
 	
-	pMOG2->operator()(input,fgMaskMOG2,-10);
+	pMOG2->apply(input,fgMaskMOG2,-10);
 	
 	// Generate output image
 	cv::Mat foreground(image4.size(),CV_8UC3,cv::Scalar(255,255,255)); // all white image
