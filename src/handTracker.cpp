@@ -41,8 +41,20 @@ HandTracker::HandTracker()
 		cv::KalmanFilter KF;
 		KF.init(6,2,0,CV_32F);
 		
-		float dummy[36] = {1, 0, dt, 0, dt*dt, 0, 0,1, 0, dt, 0, dt*dt, 0, 0, 1, 0, dt, 0, 0, 0, 0, 1, 0, dt,0, 0, 0, 0, 1,0, 0, 0, 0, 0, 0, 1};
-		KF.transitionMatrix = cv::Mat(6,6,CV_32F,dummy); 
+		//float dummy[36] = {1, 0, dt, 0, dt*dt, 0, 
+		//					 0,1, 0, dt, 0, dt*dt, 
+		//					0, 0, 1, 0, dt, 0, 
+		//					0, 0, 0, 1, 0, dt,
+		//					0, 0, 0, 0, 1,0, 
+		//					0, 0, 0, 0, 0, 1};
+		KF.transitionMatrix = cv::Mat::eye(6,6,CV_32F);//,dummy); 
+		KF.transitionMatrix.at<float>(0,2) = dt;
+		KF.transitionMatrix.at<float>(0,4) = dt*dt;
+		KF.transitionMatrix.at<float>(1,3) = dt;
+		KF.transitionMatrix.at<float>(1,5) = dt*dt;
+		KF.transitionMatrix.at<float>(2,4) = dt;
+		KF.transitionMatrix.at<float>(3,5) = dt;
+		
 			
 		KF.statePre.at<float>(0) = 0;
 		KF.statePre.at<float>(1) = 0;
@@ -53,8 +65,11 @@ HandTracker::HandTracker()
 		
 		setIdentity(KF.measurementMatrix);
 
-		float dummycov[36] = {0, 0, 0, 0, 0, 0,	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, dt*100000, 0, 0, 0, 0, 0, 0, dt*100000};
-		KF.processNoiseCov = cv::Mat(6,6,CV_32F,dummycov);
+		//float dummycov[36] = {0, 0, 0, 0, 0, 0,	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, dt*100000, 0, 0, 0, 0, 0, 0, dt*100000};
+		KF.processNoiseCov = cv::Mat::zeros(6,6,CV_32F);//,dummycov);
+		KF.processNoiseCov.at<float>(4,4) = dt*100000;
+		KF.processNoiseCov.at<float>(5,5) = dt*100000;
+		
 		setIdentity(KF.measurementNoiseCov, Scalar::all(5));
 		setIdentity(KF.errorCovPost, Scalar::all(500000));
 		setIdentity(KF.errorCovPre, Scalar::all(500000));
